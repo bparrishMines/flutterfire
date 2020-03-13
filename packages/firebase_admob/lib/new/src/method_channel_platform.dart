@@ -19,13 +19,22 @@ class NativeAd = plugin_interface.NativeAd with ReferenceHolder;
 class RewardedAd = plugin_interface.RewardedAd with ReferenceHolder;
 
 class MethodChannelPlatform extends FirebaseAdmobPlatform {
-  static final MethodChannel channel = MethodChannel(
+  MethodChannelPlatform() {
+    channel.setMethodCallHandler(onMethodCall);
+  }
+
+  final MethodChannel channel = MethodChannel(
     'plugins.flutter.io/firebase_admob',
     StandardMethodCodec(FirebaseAdmobMessageCodec()),
   );
 
   final Map<int, plugin_interface.BaseAd> _loadedAds =
       <int, plugin_interface.BaseAd>{};
+
+  Future<dynamic> onMethodCall(MethodCall call) {
+    final AdEventCallback callback = call.arguments;
+    onAdEvent(_loadedAds[callback.referenceId], callback.adEvent);
+  }
 
   @override
   FutureOr<void> initialize({String appId}) {
@@ -116,6 +125,13 @@ class AdWidget extends StatelessWidget {
   }
 }
 
+class AdEventCallback {
+  const AdEventCallback({@required this.referenceId, @required this.adEvent});
+
+  final int referenceId;
+  final plugin_interface.AdEvent adEvent;
+}
+
 class FirebaseAdmobMessageCodec extends StandardMessageCodec {
   const FirebaseAdmobMessageCodec();
 
@@ -127,6 +143,7 @@ class FirebaseAdmobMessageCodec extends StandardMessageCodec {
   static const int _valueInterstitialAd = 133;
   static const int _valueNativeAd = 134;
   static const int _valueRewardedAd = 135;
+  static const int _valueAdEventCallback = 136;
 
   @override
   void writeValue(WriteBuffer buffer, dynamic value) {
@@ -170,6 +187,24 @@ class FirebaseAdmobMessageCodec extends StandardMessageCodec {
       writeBaseAd(buffer, value);
     } else {
       super.writeValue(buffer, value);
+    }
+  }
+
+  @override
+  dynamic readValueOfType(int type, ReadBuffer buffer) {
+    switch (type) {
+      case _valueAdEvent:
+        final String enumName = readValue(buffer);
+        return plugin_interface.AdEvent.values.where(
+          (plugin_interface.AdEvent event) => event.toString() == enumName,
+        );
+      case _valueAdEventCallback:
+        return AdEventCallback(
+          referenceId: readValue(buffer),
+          adEvent: readValue(buffer),
+        );
+      default:
+        return super.readValueOfType(type, buffer);
     }
   }
 
