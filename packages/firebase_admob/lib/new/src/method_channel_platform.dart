@@ -1,11 +1,22 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:firebase_admob/new/src/platform_interface.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 
 import 'interface.dart' as plugin_interface;
+
+mixin ReferenceHolder {
+  static int _nextReferenceId = 0;
+  int _referenceId = _nextReferenceId++;
+}
+
+class BannerAd = plugin_interface.BannerAd with ReferenceHolder;
+class InterstitialAd = plugin_interface.InterstitialAd with ReferenceHolder;
+class NativeAd = plugin_interface.NativeAd with ReferenceHolder;
+class RewardedAd = plugin_interface.RewardedAd with ReferenceHolder;
 
 class MethodChannelPlatform extends FirebaseAdmobPlatform {
   static final MethodChannel channel = MethodChannel(
@@ -16,10 +27,12 @@ class MethodChannelPlatform extends FirebaseAdmobPlatform {
   final Map<int, plugin_interface.BaseAd> _loadedAds =
       <int, plugin_interface.BaseAd>{};
 
+  @override
   FutureOr<void> initialize({String appId}) {
     return channel.invokeMethod<void>('initialize', appId);
   }
 
+  @override
   FutureOr<void> loadFullscreenAd(plugin_interface.FullscreenAd ad) {
     final int referenceId = (ad as ReferenceHolder)._referenceId;
     if (_loadedAds.containsKey(referenceId)) return null;
@@ -33,6 +46,7 @@ class MethodChannelPlatform extends FirebaseAdmobPlatform {
     }
   }
 
+  @override
   FutureOr<Widget> loadWidgetAd(plugin_interface.WidgetAd ad) async {
     final int referenceId = (ad as ReferenceHolder)._referenceId;
     if (_loadedAds.containsKey(referenceId)) return null;
@@ -40,13 +54,14 @@ class MethodChannelPlatform extends FirebaseAdmobPlatform {
     _loadedAds[referenceId] = ad;
     try {
       await channel.invokeMethod<void>('loadWidgetAd', ad);
-      // TODO: Create Widget
+      return AdWidget(ad: ad);
     } on PlatformException {
       _loadedAds.remove(referenceId);
       rethrow;
     }
   }
 
+  @override
   FutureOr<void> showFullscreenAd(plugin_interface.FullscreenAd ad) {
     final int referenceId = (ad as ReferenceHolder)._referenceId;
     assert(_loadedAds.containsKey(referenceId));
@@ -59,6 +74,7 @@ class MethodChannelPlatform extends FirebaseAdmobPlatform {
     }
   }
 
+  @override
   FutureOr<void> disposeFullscreenAd(plugin_interface.FullscreenAd ad) {
     final int referenceId = (ad as ReferenceHolder)._referenceId;
     _loadedAds.remove(referenceId);
@@ -66,6 +82,7 @@ class MethodChannelPlatform extends FirebaseAdmobPlatform {
     return channel.invokeMethod<void>('disposeFullscreenAd', referenceId);
   }
 
+  @override
   FutureOr<bool> isAdLoaded(plugin_interface.BaseAd ad) async {
     final int referenceId = (ad as ReferenceHolder)._referenceId;
 
@@ -77,15 +94,27 @@ class MethodChannelPlatform extends FirebaseAdmobPlatform {
   }
 }
 
-mixin ReferenceHolder {
-  static int _nextReferenceId = 0;
-  int _referenceId = _nextReferenceId++;
-}
+class AdWidget extends StatelessWidget {
+  const AdWidget({Key key, this.ad}) : super(key: key);
 
-class BannerAd = plugin_interface.BannerAd with ReferenceHolder;
-class InterstitialAd = plugin_interface.InterstitialAd with ReferenceHolder;
-class NativeAd = plugin_interface.NativeAd with ReferenceHolder;
-class RewardedAd = plugin_interface.RewardedAd with ReferenceHolder;
+  final plugin_interface.WidgetAd ad;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.blue,
+      width: 500,
+      height: 500,
+      child: Platform.isIOS
+          ? UiKitView(
+              viewType: '$BannerAd',
+              creationParams: (ad as ReferenceHolder)._referenceId,
+              creationParamsCodec: FirebaseAdmobMessageCodec(),
+            )
+          : null,
+    );
+  }
+}
 
 class FirebaseAdmobMessageCodec extends StandardMessageCodec {
   const FirebaseAdmobMessageCodec();

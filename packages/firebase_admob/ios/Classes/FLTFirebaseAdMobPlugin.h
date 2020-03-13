@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #import <Flutter/Flutter.h>
+#import "FAFirebaseAdMobInterface.h"
+#import "FAMethodCallHandler.h"
 
 #define FLTLogWarning(format, ...) NSLog((@"FirebaseAdMobPlugin <warning> " format), ##__VA_ARGS__)
 
