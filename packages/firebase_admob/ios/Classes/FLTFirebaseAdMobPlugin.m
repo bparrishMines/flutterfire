@@ -13,17 +13,30 @@
 @interface FLTFirebaseAdMobPlugin ()
 @property(nonatomic, retain) FlutterMethodChannel *channel;
 @property(nonatomic, strong) FLTRewardedVideoAdWrapper *rewardedWrapper;
+@property FAPlatform *platform;
 @end
 
 @implementation FLTFirebaseAdMobPlugin
 
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
+  FAMethodChannel *channel = [[FAMethodChannel alloc]
+                              initWithName:@"plugins.flutter.io/firebase_admob"
+                             binaryMessenger:[registrar messenger]];
+
+  FAPlatform *platform = [[FAPlatform alloc] initWithCallbackChannel:channel];
+  FAViewFactory *viewFactory = [[FAViewFactory alloc] initWithPlatform:platform];
+  
   FLTFirebaseAdMobPlugin *instance = [[FLTFirebaseAdMobPlugin alloc] init];
-  instance.channel =
-      [FlutterMethodChannel methodChannelWithName:@"plugins.flutter.io/firebase_admob"
-                                  binaryMessenger:[registrar messenger]];
-  [registrar addMethodCallDelegate:instance channel:instance.channel];
-  instance.rewardedWrapper = [[FLTRewardedVideoAdWrapper alloc] initWithChannel:instance.channel];
+  instance.channel = channel;
+  instance.platform = platform;
+  [registrar addMethodCallDelegate:instance channel:channel];
+  [registrar registerViewFactory:viewFactory withId:@"BannerAd"];
+  
+//  instance.channel =
+//      [FlutterMethodChannel methodChannelWithName:@"plugins.flutter.io/firebase_admob"
+//                                  binaryMessenger:[registrar messenger]];
+//  [registrar addMethodCallDelegate:instance channel:instance.channel];
+//  instance.rewardedWrapper = [[FLTRewardedVideoAdWrapper alloc] initWithChannel:instance.channel];
 }
 
 - (instancetype)init {
@@ -261,55 +274,56 @@
 }
 
 - (void)handleMethodCall:(FlutterMethodCall *)call result:(FlutterResult)result {
-  if ([call.method isEqualToString:@"initialize"]) {
-    [self callInitialize:call result:result];
-    return;
-  }
-
-  if ([call.method isEqualToString:@"loadRewardedVideoAd"]) {
-    [self callLoadRewardedVideoAd:call result:result];
-    return;
-  }
-
-  if ([call.method isEqualToString:@"setRewardedVideoAdUserId"]) {
-    [self callSetRewardedVideoAdUserId:call result:result];
-    return;
-  }
-
-  if ([call.method isEqualToString:@"setRewardedVideoAdCustomData"]) {
-    [self callSetRewardedVideoAdCustomData:call result:result];
-    return;
-  }
-
-  if ([call.method isEqualToString:@"showRewardedVideoAd"]) {
-    [self callShowRewardedVideoAd:call result:result];
-    return;
-  }
-
-  NSNumber *mobileAdId = (NSNumber *)call.arguments[@"id"];
-  if (mobileAdId == nil) {
-    NSString *message = @"FirebaseAdMobPlugin method calls for banners and "
-                        @"interstitials must specify an "
-                        @"integer mobile ad id";
-    result([FlutterError errorWithCode:@"no_id" message:message details:nil]);
-    return;
-  }
-
-  if ([call.method isEqualToString:@"loadBannerAd"]) {
-    [self callLoadBannerAdWithId:mobileAdId channel:self.channel call:call result:result];
-  } else if ([call.method isEqualToString:@"loadInterstitialAd"]) {
-    [self callLoadInterstitialAd:[FLTInterstitialAd withId:mobileAdId channel:self.channel]
-                            call:call
-                          result:result];
-  } else if ([call.method isEqualToString:@"showAd"]) {
-    [self callShowAd:mobileAdId call:call result:result];
-  } else if ([call.method isEqualToString:@"isAdLoaded"]) {
-    [self callIsAdLoaded:mobileAdId call:call result:result];
-  } else if ([call.method isEqualToString:@"disposeAd"]) {
-    [self callDisposeAd:mobileAdId call:call result:result];
-  } else {
-    result(FlutterMethodNotImplemented);
-  }
+  [_platform handleMethodCall:call result:result];
+//  if ([call.method isEqualToString:@"initialize"]) {
+//    [self callInitialize:call result:result];
+//    return;
+//  }
+//
+//  if ([call.method isEqualToString:@"loadRewardedVideoAd"]) {
+//    [self callLoadRewardedVideoAd:call result:result];
+//    return;
+//  }
+//
+//  if ([call.method isEqualToString:@"setRewardedVideoAdUserId"]) {
+//    [self callSetRewardedVideoAdUserId:call result:result];
+//    return;
+//  }
+//
+//  if ([call.method isEqualToString:@"setRewardedVideoAdCustomData"]) {
+//    [self callSetRewardedVideoAdCustomData:call result:result];
+//    return;
+//  }
+//
+//  if ([call.method isEqualToString:@"showRewardedVideoAd"]) {
+//    [self callShowRewardedVideoAd:call result:result];
+//    return;
+//  }
+//
+//  NSNumber *mobileAdId = (NSNumber *)call.arguments[@"id"];
+//  if (mobileAdId == nil) {
+//    NSString *message = @"FirebaseAdMobPlugin method calls for banners and "
+//                        @"interstitials must specify an "
+//                        @"integer mobile ad id";
+//    result([FlutterError errorWithCode:@"no_id" message:message details:nil]);
+//    return;
+//  }
+//
+//  if ([call.method isEqualToString:@"loadBannerAd"]) {
+//    [self callLoadBannerAdWithId:mobileAdId channel:self.channel call:call result:result];
+//  } else if ([call.method isEqualToString:@"loadInterstitialAd"]) {
+//    [self callLoadInterstitialAd:[FLTInterstitialAd withId:mobileAdId channel:self.channel]
+//                            call:call
+//                          result:result];
+//  } else if ([call.method isEqualToString:@"showAd"]) {
+//    [self callShowAd:mobileAdId call:call result:result];
+//  } else if ([call.method isEqualToString:@"isAdLoaded"]) {
+//    [self callIsAdLoaded:mobileAdId call:call result:result];
+//  } else if ([call.method isEqualToString:@"disposeAd"]) {
+//    [self callDisposeAd:mobileAdId call:call result:result];
+//  } else {
+//    result(FlutterMethodNotImplemented);
+//  }
 }
 
 @end

@@ -44,7 +44,7 @@
 - (instancetype)initWithWidth:(NSNumber *)width height:(NSNumber *)height;
 @end
 
-@protocol FABaseAd <NSObject>
+@protocol FABaseAd <NSObject, FlutterPlatformView>
 @property NSNumber *referenceId;
 @property NSString *adUnitId;
 @property FAAdTargetingInfo *targetingInfo;
@@ -56,7 +56,7 @@
 @interface FABannerAd : NSObject<FABaseAd, GADBannerViewDelegate>
 @property FAAdSize *adSize;
 @property GADBannerView *bannerView;
-@property FAAdEventCallbackHandler adEventHandler;
+@property FAAdEventCallbackHandler *adEventHandler;
 - (instancetype)initWithReferenceId:(NSNumber *)referenceId
                              adSize:(FAAdSize *)adSize
                            adUnitId:(NSString *)adUnitId

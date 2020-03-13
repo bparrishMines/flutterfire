@@ -13,3 +13,7 @@
 - (instancetype)initWithCallbackChannel:(FAMethodChannel *)callbackChannel;
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result;
 @end
+
+@interface FAViewFactory : NSObject<FlutterPlatformViewFactory>
+- (instancetype)initWithPlatform:(FAPlatform *)platform;
+@end

@@ -107,6 +107,7 @@
 @implementation FABannerAd {
   BOOL isLoaded;
 }
+
 @synthesize adUnitId;
 @synthesize targetingInfo;
 @synthesize referenceId;
@@ -118,10 +119,10 @@
   self = [super init];
   if (self) {
     self.referenceId = referenceId;
-    self.adSize = adSize;
     self.adUnitId = adUnitId;
     self.targetingInfo = targetingInfo;
-    self.adEventHandler = adEventCallbackHandler;
+    _adSize = adSize;
+    _adEventHandler = adEventCallbackHandler;
     self->isLoaded = NO;
   }
   return self;
@@ -137,6 +138,10 @@
 
 - (BOOL)isLoaded {
   return isLoaded;
+}
+
+- (UIView*)view {
+  return _bannerView;
 }
 
 - (void)adViewDidReceiveAd:(GADBannerView *)adView {

@@ -7,6 +7,10 @@
 - (id<FABaseAd>)removeLoadedAd:(NSNumber *)referenceId;
 @end
 
+@interface FAViewFactory ()
+@property FAPlatform *platform;
+@end
+
 @interface FAReaderWriter : FlutterStandardReaderWriter
 @property FAAdEventCallbackHandler *adEventHandler;
 @end
@@ -48,6 +52,7 @@
     result(nil);
   } else if ([@"loadWidgetAd" isEqualToString:call.method]) {
     id<FABaseAd> ad = call.arguments;
+    [self addLoadedAd:ad];
     [ad load];
     result(nil);
   } else if ([@"isAdLoaded" isEqualToString:call.method]) {
@@ -73,6 +78,26 @@
   readerWriter.adEventHandler = adEventHandler;
   
   return self;
+}
+@end
+
+@implementation FAViewFactory
+- (instancetype)initWithPlatform:(FAPlatform *)platform {
+  self = [super init];
+  if (self) {
+    _platform = platform;
+  }
+  return self;
+}
+
+- (NSObject<FlutterMessageCodec> *)createArgsCodec {
+  return [FlutterStandardMessageCodec sharedInstance];
+}
+
+- (NSObject<FlutterPlatformView> *)createWithFrame:(CGRect)frame
+                                    viewIdentifier:(int64_t)viewId
+                                         arguments:(id _Nullable)args {
+  return _platform.loadedAds[args];
 }
 @end
 
