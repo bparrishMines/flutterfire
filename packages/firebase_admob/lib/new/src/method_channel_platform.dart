@@ -13,7 +13,24 @@ mixin ReferenceHolder {
   int _referenceId = _nextReferenceId++;
 }
 
-class BannerAd = plugin_interface.BannerAd with ReferenceHolder;
+class BannerAd extends plugin_interface.BannerAd with ReferenceHolder {
+  BannerAd({
+    @required String adUnitId,
+    plugin_interface.AdTargetingInfo adTargetingInfo,
+    @required plugin_interface.AdSize adSize,
+    plugin_interface.AdEventCallback onAdEvent,
+  }) : super(
+          adUnitId: adUnitId,
+          adTargetingInfo: adTargetingInfo,
+          adSize: adSize,
+          onAdEvent: onAdEvent,
+        );
+
+  static final String testAdUnitId = Platform.isAndroid
+      ? 'ca-app-pub-3940256099942544/6300978111'
+      : 'ca-app-pub-3940256099942544/2934735716';
+}
+
 class InterstitialAd = plugin_interface.InterstitialAd with ReferenceHolder;
 class NativeAd = plugin_interface.NativeAd with ReferenceHolder;
 class RewardedAd = plugin_interface.RewardedAd with ReferenceHolder;
@@ -32,7 +49,7 @@ class MethodChannelPlatform extends FirebaseAdmobPlatform {
       <int, plugin_interface.BaseAd>{};
 
   Future<dynamic> onMethodCall(MethodCall call) {
-    final AdEventCallback callback = call.arguments;
+    final AdEventCallbackData callback = call.arguments;
     onAdEvent(_loadedAds[callback.referenceId], callback.adEvent);
   }
 
@@ -125,8 +142,9 @@ class AdWidget extends StatelessWidget {
   }
 }
 
-class AdEventCallback {
-  const AdEventCallback({@required this.referenceId, @required this.adEvent});
+class AdEventCallbackData {
+  const AdEventCallbackData(
+      {@required this.referenceId, @required this.adEvent});
 
   final int referenceId;
   final plugin_interface.AdEvent adEvent;
@@ -143,7 +161,7 @@ class FirebaseAdmobMessageCodec extends StandardMessageCodec {
   static const int _valueInterstitialAd = 133;
   static const int _valueNativeAd = 134;
   static const int _valueRewardedAd = 135;
-  static const int _valueAdEventCallback = 136;
+  static const int _valueAdEventCallbackData = 136;
 
   @override
   void writeValue(WriteBuffer buffer, dynamic value) {
@@ -195,11 +213,11 @@ class FirebaseAdmobMessageCodec extends StandardMessageCodec {
     switch (type) {
       case _valueAdEvent:
         final String enumName = readValue(buffer);
-        return plugin_interface.AdEvent.values.where(
+        return plugin_interface.AdEvent.values.firstWhere(
           (plugin_interface.AdEvent event) => event.toString() == enumName,
         );
-      case _valueAdEventCallback:
-        return AdEventCallback(
+      case _valueAdEventCallbackData:
+        return AdEventCallbackData(
           referenceId: readValue(buffer),
           adEvent: readValue(buffer),
         );

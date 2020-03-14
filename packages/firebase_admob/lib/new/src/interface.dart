@@ -10,7 +10,11 @@ typedef RewardedAdEventCallback = void Function(
   int rewardAmount,
 });
 
-class FirebaseAdmob {
+class FirebaseAdMob {
+  FirebaseAdMob._();
+
+  static final FirebaseAdMob instance = FirebaseAdMob._();
+
   Future<void> initialize({String appId}) {
     return FirebaseAdmobPlatform.instance.initialize(appId: appId);
   }
@@ -73,7 +77,8 @@ abstract class BannerAd extends WidgetAd {
     AdTargetingInfo adTargetingInfo,
     this.adSize,
     this.onAdEvent,
-  }) : super(
+  })  : assert(adSize != null),
+        super(
           adUnitId: adUnitId,
           adTargetingInfo: adTargetingInfo,
         );

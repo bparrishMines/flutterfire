@@ -136,13 +136,13 @@ const UInt8 AD_EVENT_CALLBACK = 136;
     case AD_TARGETING_INFO:
       return nil;
     case AD_SIZE:
-      return [[FAAdSize alloc] initWithWidth:[self readValueOfType:type]
-                                      height:[self readValueOfType:type]];
+      return [[FAAdSize alloc] initWithWidth:[self readValueOfType:[self readByte]]
+                                      height:[self readValueOfType:[self readByte]]];
     case BANNER_AD:
-      return [[FABannerAd alloc] initWithReferenceId:[self readValueOfType:type]
-                                              adSize:[self readValueOfType:type]
-                                            adUnitId:[self readValueOfType:type]
-                                       targetingInfo:[self readValueOfType:type]
+      return [[FABannerAd alloc] initWithReferenceId:[self readValueOfType:[self readByte]]
+                                              adSize:[self readValueOfType:[self readByte]]
+                                            adUnitId:[self readValueOfType:[self readByte]]
+                                       targetingInfo:[self readValueOfType:[self readByte]]
                               adEventCallbackHandler:_adEventHandler];
     case NATIVE_AD:
       return nil;
