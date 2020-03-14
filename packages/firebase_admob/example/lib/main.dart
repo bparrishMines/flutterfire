@@ -36,6 +36,7 @@ class _MyAppState extends State<MyApp> {
       body: Container(
         color: Colors.green,
         constraints: BoxConstraints.expand(),
+        alignment: Alignment.topCenter,
         child: bannerWidget == null ? Container() : bannerWidget,
       ),
     );

@@ -80,6 +80,13 @@ class MethodChannelPlatform extends FirebaseAdmobPlatform {
     _loadedAds[referenceId] = ad;
     try {
       await channel.invokeMethod<void>('loadWidgetAd', ad);
+      if (ad is BannerAd) {
+        return AdWidget(
+          ad: ad,
+          width: ad.adSize.width.toDouble(),
+          height: ad.adSize.height.toDouble(),
+        );
+      }
       return AdWidget(ad: ad);
     } on PlatformException {
       _loadedAds.remove(referenceId);
@@ -121,16 +128,17 @@ class MethodChannelPlatform extends FirebaseAdmobPlatform {
 }
 
 class AdWidget extends StatelessWidget {
-  const AdWidget({Key key, this.ad}) : super(key: key);
+  const AdWidget({Key key, this.ad, this.width, this.height}) : super(key: key);
 
   final plugin_interface.WidgetAd ad;
+  final double width;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.blue,
-      width: 500,
-      height: 500,
+      width: width,
+      height: height,
       child: Platform.isIOS
           ? UiKitView(
               viewType: '$BannerAd',
@@ -143,8 +151,10 @@ class AdWidget extends StatelessWidget {
 }
 
 class AdEventCallbackData {
-  const AdEventCallbackData(
-      {@required this.referenceId, @required this.adEvent});
+  const AdEventCallbackData({
+    @required this.referenceId,
+    @required this.adEvent,
+  });
 
   final int referenceId;
   final plugin_interface.AdEvent adEvent;
