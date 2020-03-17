@@ -8,16 +8,15 @@
 
 #import "FLTMobileAd.h"
 #import "FLTRewardedVideoAdWrapper.h"
-#import "Firebase/Firebase.h"
 
 @interface FLTFirebaseAdMobPlugin ()
 @property(nonatomic, retain) FlutterMethodChannel *channel;
 @property(nonatomic, strong) FLTRewardedVideoAdWrapper *rewardedWrapper;
 @property FAPlatform *platform;
+@property NSMutableDictionary<NSString *, id<FLTNativeAdFactory>> *nativeAdFactories;
 @end
 
 @implementation FLTFirebaseAdMobPlugin
-
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar> *)registrar {
   FAMethodChannel *channel = [[FAMethodChannel alloc]
                               initWithName:@"plugins.flutter.io/firebase_admob"
@@ -27,6 +26,7 @@
   FAViewFactory *viewFactory = [[FAViewFactory alloc] initWithPlatform:platform];
   
   FLTFirebaseAdMobPlugin *instance = [[FLTFirebaseAdMobPlugin alloc] init];
+
   instance.channel = channel;
   instance.platform = platform;
   [registrar addMethodCallDelegate:instance channel:channel];
@@ -36,7 +36,8 @@
 //      [FlutterMethodChannel methodChannelWithName:@"plugins.flutter.io/firebase_admob"
 //                                  binaryMessenger:[registrar messenger]];
 //  [registrar addMethodCallDelegate:instance channel:instance.channel];
-//  instance.rewardedWrapper = [[FLTRewardedVideoAdWrapper alloc] initWithChannel:instance.channel];
+//  instance.rewardedWrapper = [[FLTRewardedVideoAdWrapper alloc]
+//                              initWithChannel:instance.channel];
 }
 
 - (instancetype)init {
@@ -46,12 +47,46 @@
     [FIRApp configure];
     NSLog(@"Configured the default Firebase app %@.", [FIRApp defaultApp].name);
   }
+
+  if (self) _nativeAdFactories = [NSMutableDictionary dictionary];
   return self;
 }
 
 - (void)dealloc {
   [self.channel setMethodCallHandler:nil];
   self.channel = nil;
+}
+
++ (BOOL)registerNativeAdFactory:(NSObject<FlutterPluginRegistry> *)registry
+                      factoryId:(NSString *)factoryId
+                nativeAdFactory:(NSObject<FLTNativeAdFactory> *)nativeAdFactory {
+  NSString *pluginClassName = NSStringFromClass([FLTFirebaseAdMobPlugin class]);
+  FLTFirebaseAdMobPlugin *adMobPlugin =
+      (FLTFirebaseAdMobPlugin *)[registry valuePublishedByPlugin:pluginClassName];
+  if (!adMobPlugin) {
+    NSString *reason = [NSString
+        stringWithFormat:@"Could not find a %@ instance. The plugin may have not been registered.",
+                         pluginClassName];
+    [NSException exceptionWithName:NSInvalidArgumentException reason:reason userInfo:nil];
+  }
+
+  if (adMobPlugin.nativeAdFactories[factoryId]) {
+    NSLog(@"A NativeAdFactory with the following factoryId already exists: %@", factoryId);
+    return NO;
+  }
+
+  [adMobPlugin.nativeAdFactories setValue:nativeAdFactory forKey:factoryId];
+  return YES;
+}
+
++ (id<FLTNativeAdFactory>)unregisterNativeAdFactory:(NSObject<FlutterPluginRegistry> *)registry
+                                          factoryId:(NSString *)factoryId {
+  FLTFirebaseAdMobPlugin *adMobPlugin = (FLTFirebaseAdMobPlugin *)[registry
+      valuePublishedByPlugin:NSStringFromClass([FLTFirebaseAdMobPlugin class])];
+
+  id<FLTNativeAdFactory> factory = adMobPlugin.nativeAdFactories[factoryId];
+  if (factory) [adMobPlugin.nativeAdFactories removeObjectForKey:factoryId];
+  return factory;
 }
 
 - (void)callInitialize:(FlutterMethodCall *)call result:(FlutterResult)result {
@@ -158,6 +193,42 @@
 
   NSDictionary *targetingInfo = (NSDictionary *)call.arguments[@"targetingInfo"];
   [ad loadWithAdUnitId:adUnitId targetingInfo:targetingInfo];
+  result([NSNumber numberWithBool:YES]);
+}
+
+- (void)callLoadNativeAdWithId:(NSNumber *)id
+                       channel:(FlutterMethodChannel *)channel
+                          call:(FlutterMethodCall *)call
+                        result:(FlutterResult)result {
+  NSString *adUnitId = (NSString *)call.arguments[@"adUnitId"];
+
+  if (adUnitId == nil || [adUnitId length] == 0) {
+    NSString *message =
+        [NSString stringWithFormat:@"a null or empty adUnitId was provided for %@", id];
+    result([FlutterError errorWithCode:@"no_adunit_id" message:message details:nil]);
+    return;
+  }
+
+  NSDictionary *customOptions = (NSDictionary *)call.arguments[@"customOptions"];
+  NSString *factoryId = (NSString *)call.arguments[@"factoryId"];
+
+  FLTNativeAd *nativeAd = [FLTNativeAd withId:id
+                                      channel:self.channel
+                              nativeAdFactory:_nativeAdFactories[factoryId]
+                                customOptions:customOptions];
+
+  if (nativeAd.status != CREATED) {
+    if (nativeAd.status == FAILED) {
+      NSString *message = [NSString stringWithFormat:@"cannot reload a failed ad=%@", nativeAd];
+      result([FlutterError errorWithCode:@"load_failed_ad" message:message details:nil]);
+    } else {
+      result([NSNumber numberWithBool:YES]);  // The ad was already loaded.
+    }
+    return;
+  }
+
+  NSDictionary *targetingInfo = (NSDictionary *)call.arguments[@"targetingInfo"];
+  [nativeAd loadWithAdUnitId:adUnitId targetingInfo:targetingInfo];
   result([NSNumber numberWithBool:YES]);
 }
 
@@ -275,6 +346,7 @@
 
 - (void)handleMethodCall:(FlutterMethodCall *)call result:(FlutterResult)result {
   [_platform handleMethodCall:call result:result];
+
 //  if ([call.method isEqualToString:@"initialize"]) {
 //    [self callInitialize:call result:result];
 //    return;
@@ -315,6 +387,8 @@
 //    [self callLoadInterstitialAd:[FLTInterstitialAd withId:mobileAdId channel:self.channel]
 //                            call:call
 //                          result:result];
+//  } else if ([call.method isEqualToString:@"loadNativeAd"]) {
+//    [self callLoadNativeAdWithId:mobileAdId channel:self.channel call:call result:result];
 //  } else if ([call.method isEqualToString:@"showAd"]) {
 //    [self callShowAd:mobileAdId call:call result:result];
 //  } else if ([call.method isEqualToString:@"isAdLoaded"]) {
